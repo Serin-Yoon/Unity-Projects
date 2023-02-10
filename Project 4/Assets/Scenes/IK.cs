@@ -5,61 +5,78 @@ using UnityEngine;
 public class IK : MonoBehaviour {
 
     Transform RightUpLeg, RightLeg, RightFoot;
-    GameObject target;
+    Transform LeftArm, LeftForeArm, LeftHand;
+    GameObject RightLegTarget;
+    GameObject LeftArmTarget;
 
     void Start() {
         // Get RightUpLeg, RightLeg, RightFoot
         RightUpLeg = transform.GetChild(2).GetChild(1);
         RightLeg = RightUpLeg.GetChild(0);
         RightFoot = RightLeg.GetChild(0);
-        // Set Target position
-        target = GameObject.Find("Target");
-        target.transform.position = new Vector3(0.0f, 0.05f, 0.5f);
+
+        // Set Right Leg Target position
+        RightLegTarget = GameObject.Find("RightLegTarget");
+        RightLegTarget.transform.position = new Vector3(0.0f, 0.05f, 0.5f);
+
+        // Get LeftArm, LeftForeArm, LeftHand
+        LeftArm = transform.GetChild(2).GetChild(2).GetChild(0).GetChild(0).GetChild(0).GetChild(0);
+        LeftForeArm = LeftArm.GetChild(0);
+        LeftHand = LeftForeArm.GetChild(0);
+
+        // Set Left Arm Target position
+        LeftArmTarget = GameObject.Find("LeftArmTarget");
+        LeftArmTarget.transform.position = new Vector3(-1.0f, 1.5f, 0.5f);
+
+        Debug.Log(LeftArm.name);
+        Debug.Log(LeftForeArm.name);
+        Debug.Log(LeftHand.name);
     }
 
     void Update() {
-        MoveTarget();
-        InverseKinematics();
+        InverseKinematics(RightUpLeg, RightLeg, RightFoot, RightLegTarget);
+        InverseKinematics(LeftArm, LeftForeArm, LeftHand, LeftArmTarget);
     }
 
-    private void MoveTarget() {
-        if (Input.GetKey(KeyCode.LeftArrow)) target.transform.Translate(0.01f, 0, 0);
-        if (Input.GetKey(KeyCode.RightArrow)) target.transform.Translate(-0.01f, 0, 0);
-        if (Input.GetKey(KeyCode.UpArrow)) target.transform.Translate(0, 0, -0.01f);
-        if (Input.GetKey(KeyCode.DownArrow)) target.transform.Translate(0, 0, 0.01f);
-        if (Input.GetKey(KeyCode.W)) target.transform.Translate(0, 0.01f, 0);
-        if (Input.GetKey(KeyCode.S)) target.transform.Translate(0, -0.01f, 0);
-    }
+    /* 
+        Inverse Kinematics
+        Ref: https://theorangeduck.com/page/simple-two-joint
+    */
 
-    // Ref: https://theorangeduck.com/page/simple-two-joint
-    private void InverseKinematics() {
-        /* Step 1: Extend/Contract the Joint Chain */
+    private void InverseKinematics(Transform a, Transform b, Transform c, GameObject t) {
+        /* Step 1: Extend/Contract the joint chain */
         float eps = 0.01f;
-        float lab = Vector3.Distance(RightLeg.position, RightUpLeg.position);
-        float lcb = Vector3.Distance(RightLeg.position, RightFoot.position);
-        float lat = Mathf.Clamp(Vector3.Distance(target.transform.position, RightLeg.position), eps, lab+lcb-eps);
+        float lab = Vector3.Distance(b.position, a.position);
+        float lcb = Vector3.Distance(b.position, c.position);
+        float lat = Mathf.Clamp(Vector3.Distance(t.transform.position, a.position), eps, lab+lcb-eps);
 
         float ac_ab_0 = Mathf.Acos(Mathf.Clamp(
-            Vector3.Dot((RightFoot.position-RightUpLeg.position).normalized, (RightLeg.position-RightUpLeg.position).normalized), -1, 1));
+            Vector3.Dot((c.position-a.position).normalized, (b.position-a.position).normalized), -1, 1));
         float ba_bc_0 = Mathf.Acos(Mathf.Clamp(
-            Vector3.Dot((RightUpLeg.position-RightLeg.position).normalized, (RightFoot.position-RightLeg.position).normalized), -1, 1));
+            Vector3.Dot((a.position-b.position).normalized, (c.position-b.position).normalized), -1, 1));
 
         float ac_ab_1 = Mathf.Acos(Mathf.Clamp((lcb*lcb-lab*lab-lat*lat)/(-2*lab*lat), -1, 1));
         float ba_bc_1 = Mathf.Acos(Mathf.Clamp((lat*lat-lab*lab-lcb*lcb)/(-2*lab*lcb), -1, 1));
 
-        Vector3 axis0 = Vector3.Cross(RightFoot.position-RightUpLeg.position, RightLeg.position-RightUpLeg.position).normalized;
-        Quaternion r0 = Quaternion.AngleAxis(ac_ab_1-ac_ab_0, Quaternion.Inverse(RightUpLeg.rotation)*axis0);
-        Quaternion r1 = Quaternion.AngleAxis(ba_bc_1-ba_bc_0, Quaternion.Inverse(RightLeg.rotation)*axis0);
+        // radian to degree
+        ac_ab_0 = ac_ab_0 * 180 / Mathf.PI;
+        ba_bc_0 = ba_bc_0 * 180 / Mathf.PI;
+        ac_ab_1 = ac_ab_1 * 180 / Mathf.PI;
+        ba_bc_1 = ba_bc_1 * 180 / Mathf.PI;
         
-        RightUpLeg.localRotation = RightUpLeg.localRotation * r0;
-        RightLeg.localRotation = RightLeg.localRotation * r1;
+        Vector3 axis0 = Vector3.Cross(c.position-a.position, b.position-a.position).normalized;
+        Quaternion r0 = Quaternion.AngleAxis(ac_ab_1-ac_ab_0, Quaternion.Inverse(a.rotation)*axis0);
+        Quaternion r1 = Quaternion.AngleAxis(ba_bc_1-ba_bc_0, Quaternion.Inverse(b.rotation)*axis0);
+        
+        a.localRotation = a.localRotation * r0;
+        b.localRotation = b.localRotation * r1;
 
-        /* Step 2: Rotate the RightFoot into Target */
+        /* Step 2: Rotate the end effector into target */
         float ac_at_0 = Mathf.Acos(Mathf.Clamp(
-            Vector3.Dot((RightFoot.position-RightUpLeg.position).normalized, (target.transform.position-RightUpLeg.position).normalized), -1, 1));
-        Vector3 axis1 = Vector3.Cross(RightFoot.position-RightUpLeg.position, target.transform.position-RightUpLeg.position).normalized;
-        Quaternion r2 = Quaternion.AngleAxis(ac_at_0, Quaternion.Inverse(RightUpLeg.rotation)*axis1);
+            Vector3.Dot((c.position-a.position).normalized, (t.transform.position-a.position).normalized), -1, 1));
+        Vector3 axis1 = Vector3.Cross(c.position-a.position, t.transform.position-a.position).normalized;
+        Quaternion r2 = Quaternion.AngleAxis(ac_at_0, Quaternion.Inverse(a.rotation)*axis1);
         
-        RightUpLeg.localRotation = RightUpLeg.localRotation * r2;
+        a.localRotation = a.localRotation * r2;
     }
 }
