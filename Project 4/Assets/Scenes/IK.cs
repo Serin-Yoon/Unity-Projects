@@ -48,7 +48,7 @@ public class IK : MonoBehaviour {
         float eps = 0.01f;
         float lab = Vector3.Distance(b.position, a.position);
         float lcb = Vector3.Distance(b.position, c.position);
-        float lat = Mathf.Clamp(Vector3.Distance(t.transform.position, a.position), eps, lab+lcb-eps);
+        float lat = Mathf.Clamp(Vector3.Distance(t.transform.position, b.position), eps, lab+lcb-eps);
 
         float ac_ab_0 = Mathf.Acos(Mathf.Clamp(
             Vector3.Dot((c.position-a.position).normalized, (b.position-a.position).normalized), -1, 1));
@@ -58,12 +58,6 @@ public class IK : MonoBehaviour {
         float ac_ab_1 = Mathf.Acos(Mathf.Clamp((lcb*lcb-lab*lab-lat*lat)/(-2*lab*lat), -1, 1));
         float ba_bc_1 = Mathf.Acos(Mathf.Clamp((lat*lat-lab*lab-lcb*lcb)/(-2*lab*lcb), -1, 1));
 
-        // radian to degree
-        ac_ab_0 = ac_ab_0 * 180 / Mathf.PI;
-        ba_bc_0 = ba_bc_0 * 180 / Mathf.PI;
-        ac_ab_1 = ac_ab_1 * 180 / Mathf.PI;
-        ba_bc_1 = ba_bc_1 * 180 / Mathf.PI;
-        
         Vector3 axis0 = Vector3.Cross(c.position-a.position, b.position-a.position).normalized;
         Quaternion r0 = Quaternion.AngleAxis(ac_ab_1-ac_ab_0, Quaternion.Inverse(a.rotation)*axis0);
         Quaternion r1 = Quaternion.AngleAxis(ba_bc_1-ba_bc_0, Quaternion.Inverse(b.rotation)*axis0);
