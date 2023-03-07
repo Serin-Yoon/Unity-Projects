@@ -7,3 +7,4 @@
 | **Project 3**| Animation using velocity | https://youtu.be/m8rGyoStfgQ |
 | **Project 4**| Two Bone Inverse Kinematics | https://theorangeduck.com/page/simple-two-joint |
 | **Project 5**| Pose Blending with IK | |
+| **Project 6**| John Lemon's Haunted Jaunt | https://learn.unity.com/project/jon-remonyi-gongpo-ceheom-3d-cogeubjayong |
